@@ -1,0 +1,33 @@
+/* Loads Tailwind v4. No tailwind.config.js needed: it scans your files automatically. */
+@import "tailwindcss";
+
+/* CSS variables = your theme tokens (like a colors.ts file in RN). */
+:root {
+  --background: #fafafa;
+  --foreground: #171717;
+  /* Tells the browser to style scrollbars and form controls for light AND dark. */
+  color-scheme: light dark;
+}
+
+/* Dark mode follows the device setting, same media query Tailwind's dark: uses. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* Registers the variables with Tailwind so you can write bg-background, text-foreground, font-sans. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Use the Geist font loaded in layout.tsx (the template used Arial here). */
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
