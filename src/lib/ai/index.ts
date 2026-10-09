@@ -6,6 +6,7 @@ import { claude } from "./providers/claude";
 import { gemini } from "./providers/gemini";
 import { BusyError, withRetry } from "./retry";
 import type { Provider } from "./types";
+import { UserFacingError } from "./errors";
 
 // Lookup table: AI_PROVIDER value -> provider object. Adding a provider = one line here.
 const providers: Record<"gemini" | "claude", Provider> = { gemini, claude };
@@ -13,7 +14,8 @@ const providers: Record<"gemini" | "claude", Provider> = { gemini, claude };
 const JSON_REMINDER =
   "IMPORTANT: Your previous reply was not valid. Return ONLY valid JSON matching the schema. No markdown, no extra text.";
 
-export const BUSY_MESSAGE = "The AI is busy right now, please try again in a few seconds";
+export const BUSY_MESSAGE =
+  "The AI is busy right now, please try again in a few seconds";
 
 type GenerateJSONOptions<T> = {
   /** What the AI should do (the feature's SYSTEM_PROMPT). */
@@ -47,19 +49,25 @@ export async function generateJSON<T>({
 
   // Up to 2 attempts: the second adds a stricter reminder.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const prompt = attempt === 0 ? fullSystem : `${fullSystem}\n\n${JSON_REMINDER}`;
+    const prompt =
+      attempt === 0 ? fullSystem : `${fullSystem}\n\n${JSON_REMINDER}`;
     // withRetry handles busy errors (backoff + model fallback) for each attempt.
     const text = await withRetry(provider.models, (model) =>
-      provider.call({ model, system: prompt, input, jsonSchema })
+      provider.call({ model, system: prompt, input, jsonSchema }),
     );
 
     // Parse the text, then validate the shape. Both must pass.
     const result = schema.safeParse(parseJSON(text));
     if (result.success) return result.data; // typed as T
-    console.warn(`[ai] ${provider.name} reply failed validation:`, z.prettifyError(result.error));
+    console.warn(
+      `[ai] ${provider.name} reply failed validation:`,
+      z.prettifyError(result.error),
+    );
   }
 
-  throw new Error("The AI returned data in an unexpected format. Please try again.");
+  throw new UserFacingError(
+    "The AI returned data in an unexpected format. Please try again.",
+  );
 }
 
 /** Turns any error into a friendly JSON Response for an API route. */
@@ -67,6 +75,10 @@ export function aiErrorResponse(error: unknown): Response {
   if (error instanceof BusyError) {
     // 503 = Service Unavailable: tells the client "temporary, try again".
     return Response.json({ error: BUSY_MESSAGE }, { status: 503 });
+  }
+  if (error instanceof UserFacingError) {
+    // 502 = Bad Gateway: "the upstream service (the AI) gave a bad reply".
+    return Response.json({ error: error.message }, { status: 502 });
   }
   // Full error goes to the SERVER log (terminal / Vercel logs), never to the user.
   console.error("[ai] request failed:", error);
