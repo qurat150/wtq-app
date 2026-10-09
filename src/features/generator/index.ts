@@ -3,3 +3,5 @@
 // never pull in server code. route.ts imports server/generate directly.
 export { GenerateRequestSchema, GeneratorResultSchema } from "./schema";
 export type { GeneratorItem, GeneratorResult } from "./schema";
+
+export { GeneratorScreen } from "./components/GeneratorScreen";
