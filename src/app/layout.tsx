@@ -3,12 +3,12 @@ import type { Metadata, Viewport } from "next";
 
 // next/font downloads Google Fonts AT BUILD TIME and self-hosts them,
 // so there's no runtime request to Google and no flash of the wrong font
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
+const sans = Plus_Jakarta_Sans({
   // Exposes the font as a CSS variable; globals.css maps it to Tailwind's font-sans.
-  variable: "--font-geist-sans",
+  variable: "--font-sans-family",
   subsets: ["latin"],
 });
 
@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 
 // The browser tab title and search-engine description. Rename it on event day.
 export const metadata: Metadata = {
-  title: "Interview Prep",
-  description: "Women Tech Quest 2026: Build with AI",
+  title: "BillSamaj: Your bill. Finally, understood.",
+  description: "Upload a K-Electric, LESCO or IESCO electricity bill and get every charge explained in plain language.",
 };
 
 // Makes phones render at their real width instead of a zoomed-out desktop view.
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">{children}</body>
     </html>

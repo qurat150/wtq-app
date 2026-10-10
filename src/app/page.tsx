@@ -1,6 +1,6 @@
-// Server Component (no "use client"): stays thin, just renders the feature's client screen.
-import { GeneratorScreen } from "@/features/generator";
+// Server Component: stays thin, just renders the feature's client screen.
+import { BillApp } from "@/features/bill";
 
 export default function Home() {
-  return <GeneratorScreen />;
+  return <BillApp />;
 }

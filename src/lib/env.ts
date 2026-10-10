@@ -12,6 +12,9 @@ const EnvSchema = z.object({
     .string()
     .optional()
     .transform((value) => value === "true"),
+  // Model ID. Competition rules allow ONLY: gemini-3.5-flash-lite, gemini-3.1-flash-lite,
+  // claude-haiku-4-5 (plus OpenAI models we don't use). Empty = the provider's default.
+  MODEL_NAME: z.string().optional(),
   // Optional here: you only need the key for the provider you actually use.
   GEMINI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),

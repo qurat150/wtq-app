@@ -9,9 +9,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variants = {
   primary:
-    "bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400 dark:text-neutral-950",
+    "bg-brand text-white hover:bg-teal-800",
   secondary:
-    "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800",
+    "border border-line bg-surface text-ink hover:bg-surface-2",
 };
 
 export function Button({
@@ -32,7 +32,7 @@ export function Button({
       aria-busy={loading}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
         "disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
         className // last, so callers can override

@@ -1,8 +1,10 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import { requireKey } from "@/lib/env";
+import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import { getEnv, requireKey } from "@/lib/env";
+import { UserFacingError } from "../errors";
 import { BusyError } from "../retry";
-import type { Provider } from "../types";
+import type { AIFile, Provider } from "../types";
 
 let client: Anthropic | undefined;
 
@@ -20,31 +22,54 @@ function isBusy(error: unknown) {
   return error instanceof Anthropic.APIError && (error.status === 503 || error.status === 529);
 }
 
+// Images and PDFs use different content block types in the Messages API.
+function toBlock(file: AIFile): BetaContentBlockParam {
+  if (file.mimeType === "application/pdf") {
+    return {
+      type: "document",
+      source: { type: "base64", media_type: "application/pdf", data: file.data },
+    };
+  }
+  return {
+    type: "image",
+    source: {
+      type: "base64",
+      media_type: file.mimeType as "image/jpeg" | "image/png",
+      data: file.data,
+    },
+  };
+}
+
 export const claude: Provider = {
   name: "claude",
-  models: ["claude-opus-5-5"],
+  // Competition rule: only claude-haiku-4-5 is allowed.
+  get models() {
+    return [getEnv().MODEL_NAME || "claude-haiku-4-5"];
+  },
 
-  async call({ model, system, input, jsonSchema }) {
+  async call({ model, system, input, jsonSchema, files = [], timeoutMs }) {
     try {
-      // .beta because the refusal-fallback feature is a beta API.
-      const response = await getClient().beta.messages.create({
-        model,
-        max_tokens: 16000, // generous ceiling; too low cuts the JSON off mid-way
-        system,
-        messages: [{ role: "user", content: input }],
-        output_config: {
-          effort: "low", // simple JSON task: fast + cheap. Raise to "medium" for better quality.
-          // Structured output: Claude's reply MUST match this JSON Schema.
-          format: { type: "json_schema", schema: jsonSchema },
+      const response = await getClient().beta.messages.create(
+        {
+          model,
+          max_tokens: 8000, // generous ceiling; too low cuts the JSON off mid-way
+          system,
+          // Documents first, then the text that refers to them.
+          messages: [
+            { role: "user", content: [...files.map(toBlock), { type: "text", text: input }] },
+          ],
+          output_config: {
+            // Structured output: Claude's reply MUST match this JSON Schema.
+            format: { type: "json_schema", schema: jsonSchema },
+          },
+          // No server-side model fallback: only the configured model may answer.
         },
-        // If the safety filter declines, the API retries on a fallback model in the same call.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-      });
+        { timeout: timeoutMs },
+      );
 
       // Always check why it stopped BEFORE reading the content.
       if (response.stop_reason === "refusal") {
-        throw new Error("The AI declined this request. Try rephrasing it.");
+        throw new UserFacingError("The AI declined this request. Try rephrasing it.");
       }
 
       // content is an array of blocks (text, thinking, ...). Keep only the text.
@@ -53,6 +78,9 @@ export const claude: Provider = {
         .join("");
     } catch (error) {
       if (isBusy(error)) throw new BusyError();
+      if (error instanceof Anthropic.APIConnectionTimeoutError) {
+        throw new UserFacingError("The AI took too long to respond. Please try again.", 504);
+      }
       throw error;
     }
   },

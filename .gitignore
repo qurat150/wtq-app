@@ -41,3 +41,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# BillSamaj: generated results, competition data and local transcripts stay out of git
+/output/
+/data/
+/submission/
+*.zip
+/20*-*.txt
+/test/
+/demo/*.tmp
+/Screen Recording*
+/demo/
